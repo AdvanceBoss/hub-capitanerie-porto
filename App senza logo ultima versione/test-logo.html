@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Caricamento Logo Effigie</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #003366;
+            border-bottom: 3px solid #003366;
+            padding-bottom: 10px;
+        }
+        .status {
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        #logoPreview {
+            margin: 20px 0;
+            text-align: center;
+        }
+        #logoPreview img {
+            max-width: 200px;
+            border: 2px solid #003366;
+            padding: 10px;
+            background: white;
+        }
+        .info {
+            background: #e7f3ff;
+            padding: 15px;
+            border-left: 4px solid #2196F3;
+            margin: 20px 0;
+        }
+        button {
+            background: #003366;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #004d99;
+        }
+        pre {
+            background: #f4f4f4;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Test Caricamento Logo Effigie dello Stato</h1>
+        
+        <div class="info">
+            <strong>ℹ️ Informazioni:</strong><br>
+            Questo test verifica se il logo può essere caricato correttamente per l'incorporamento nei documenti Word.<br>
+            <br>
+            <strong>Protocollo corrente:</strong> <span id="protocol" style="font-weight: bold;"></span>
+        </div>
+        
+        <button onclick="testLogo()">🔄 Avvia Test</button>
+        <button onclick="showBase64()">📄 Mostra Base64</button>
+        <button onclick="location.reload()">🔁 Ricarica Pagina</button>
+        
+        <div id="status"></div>
+        <div id="logoPreview"></div>
+        <div id="base64Output"></div>
+    </div>
+
+    <script>
+        let effigieBase64 = null;
+        
+        // Mostra il protocollo corrente
+        document.getElementById('protocol').textContent = window.location.protocol;
+        if (window.location.protocol === 'file:') {
+            document.getElementById('protocol').style.color = 'red';
+            const warning = document.createElement('div');
+            warning.className = 'status warning';
+            warning.innerHTML = '⚠️ <strong>ATTENZIONE:</strong> Stai usando il protocollo file://. Il caricamento potrebbe fallire.<br>Per test affidabili, usa un web server (es: Live Server, Python HTTP, Netlify).';
+            document.querySelector('.container').insertBefore(warning, document.querySelector('button'));
+        } else {
+            document.getElementById('protocol').style.color = 'green';
+        }
+
+        async function blobToBase64(blob) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+            });
+        }
+
+        async function loadEffigieAsBase64() {
+            try {
+                console.log('🔍 Tentativo di caricamento effigie-stato.png...');
+                
+                // Metodo 1: Fetch (funziona con web server)
+                try {
+                    const response = await fetch('effigie-stato.png');
+                    console.log('Fetch response status:', response.status);
+                    
+                    if (response.ok) {
+                        const blob = await response.blob();
+                        const base64 = await blobToBase64(blob);
+                        console.log('✅ Effigie caricata via FETCH');
+                        console.log('Dimensione blob:', blob.size, 'bytes');
+                        console.log('Lunghezza base64:', base64.length, 'caratteri');
+                        return { success: true, method: 'fetch', base64, size: blob.size };
+                    }
+                } catch (fetchError) {
+                    console.warn('⚠️ Fetch fallito:', fetchError.message);
+                }
+                
+                // Metodo 2: Canvas (fallback)
+                return new Promise((resolve) => {
+                    console.log('🔄 Tentativo con metodo CANVAS...');
+                    const img = new Image();
+                    
+                    img.onload = function() {
+                        try {
+                            const canvas = document.createElement('canvas');
+                            canvas.width = img.width;
+                            canvas.height = img.height;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0);
+                            
+                            try {
+                                const dataURL = canvas.toDataURL('image/png');
+                                console.log('✅ Effigie caricata via CANVAS');
+                                console.log('Dimensioni:', img.width, 'x', img.height);
+                                resolve({ success: true, method: 'canvas', base64: dataURL });
+                            } catch (canvasError) {
+                                console.error('❌ Canvas toDataURL bloccato:', canvasError.message);
+                                resolve({ success: false, error: 'CORS/Tainted Canvas', message: canvasError.message });
+                            }
+                        } catch (error) {
+                            console.error('❌ Errore canvas:', error);
+                            resolve({ success: false, error: 'Canvas Error', message: error.message });
+                        }
+                    };
+                    
+                    img.onerror = function(error) {
+                        console.error('❌ Errore caricamento immagine');
+                        resolve({ success: false, error: 'Image Load Failed' });
+                    };
+                    
+                    img.src = 'effigie-stato.png';
+                });
+                
+            } catch (error) {
+                console.error('❌ Errore generale:', error);
+                return { success: false, error: 'General Error', message: error.message };
+            }
+        }
+
+        async function testLogo() {
+            const statusDiv = document.getElementById('status');
+            const previewDiv = document.getElementById('logoPreview');
+            
+            statusDiv.innerHTML = '<div class="status warning">⏳ Caricamento in corso...</div>';
+            previewDiv.innerHTML = '';
+            
+            const result = await loadEffigieAsBase64();
+            
+            if (result.success) {
+                effigieBase64 = result.base64;
+                
+                statusDiv.innerHTML = `
+                    <div class="status success">
+                        ✅ <strong>SUCCESSO!</strong><br>
+                        Metodo utilizzato: <strong>${result.method.toUpperCase()}</strong><br>
+                        ${result.size ? `Dimensione: ${result.size} bytes<br>` : ''}
+                        Lunghezza Base64: ${result.base64.length} caratteri<br>
+                        <br>
+                        ✨ Il logo sarà visibile nei documenti Word!
+                    </div>
+                `;
+                
+                previewDiv.innerHTML = `
+                    <h3>Anteprima Logo:</h3>
+                    <img src="${result.base64}" alt="Effigie dello Stato">
+                    <p style="color: green; font-weight: bold;">✓ Logo caricato correttamente</p>
+                `;
+            } else {
+                statusDiv.innerHTML = `
+                    <div class="status error">
+                        ❌ <strong>FALLITO</strong><br>
+                        Errore: ${result.error}<br>
+                        ${result.message ? `Dettagli: ${result.message}<br>` : ''}
+                        <br>
+                        ⚠️ Il logo NON sarà visibile nei documenti Word.<br>
+                        <br>
+                        <strong>Soluzione:</strong> Apri l'app da un web server (Netlify, Live Server, etc.)
+                    </div>
+                `;
+            }
+        }
+
+        function showBase64() {
+            const outputDiv = document.getElementById('base64Output');
+            if (effigieBase64) {
+                outputDiv.innerHTML = `
+                    <h3>Base64 String (primi 500 caratteri):</h3>
+                    <pre>${effigieBase64.substring(0, 500)}...</pre>
+                    <p><strong>Lunghezza totale:</strong> ${effigieBase64.length} caratteri</p>
+                    <button onclick="copyBase64()">📋 Copia Base64 Completo</button>
+                `;
+            } else {
+                outputDiv.innerHTML = '<div class="status warning">⚠️ Esegui prima il test per generare il base64</div>';
+            }
+        }
+
+        function copyBase64() {
+            navigator.clipboard.writeText(effigieBase64).then(() => {
+                alert('✅ Base64 copiato negli appunti!');
+            }).catch(err => {
+                console.error('Errore copia:', err);
+                alert('❌ Errore nella copia');
+            });
+        }
+
+        // Test automatico all'avvio
+        window.addEventListener('load', () => {
+            setTimeout(testLogo, 500);
+        });
+    </script>
+</body>
+</html>
+
